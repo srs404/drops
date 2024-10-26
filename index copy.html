@@ -496,15 +496,25 @@
                     case 'user':
                         renderUserPage();
                         break;
-                    case 'cart':
-                        renderCartPage();
-                        break;
                     case 'all':
+                        // Reset the main content to default structure
                         mainContent.innerHTML = `
                     <h2 id="categoryTitle" class="text-2xl font-semibold mb-6 text-gray-800">All Items</h2>
                     <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"></div>
                 `;
-                        renderProducts('all');
+                        // Render all products
+                        const productGrid = document.getElementById('productGrid');
+                        productGrid.innerHTML = coffeeProducts.map(createProductCard).join('');
+                        // Update counters and size selections for existing items
+                        Object.keys(counterValues).forEach(productId => {
+                            updateCounter(parseInt(productId));
+                        });
+                        Object.keys(sizeSelections).forEach(productId => {
+                            updateSizeButton(parseInt(productId));
+                        });
+                        break;
+                    case 'cart':
+                        renderCartPage();
                         break;
                     case 'options':
                         renderOptionsPage();
@@ -516,127 +526,8 @@
                 // Fade in the new content
                 mainContent.style.opacity = '1';
                 mainContent.style.transform = 'translateY(0)';
-            }, 300);
+            }, 300); // Match this with the CSS transition duration
         }
-
-        // Calculate order total
-        function calculateOrderTotal() {
-            let subtotal = 0;
-            Object.keys(counterValues).forEach(productId => {
-                const product = coffeeProducts.find(p => p.id === parseInt(productId));
-                subtotal += product.price * counterValues[productId];
-            });
-
-            const vat = subtotal * 0.075;
-            const deliveryCharge = 60;
-            const discount = 45; // This could be made dynamic based on coupon logic
-
-            return {
-                subtotal: subtotal,
-                vat: Math.round(vat),
-                discount: discount,
-                deliveryCharge: deliveryCharge,
-                total: Math.round(subtotal + vat - discount + deliveryCharge)
-            };
-        }
-
-
-
-        // Update progress bar
-        function updateProgressBar(completion) {
-            const progressBar = document.querySelector('.bg-black');
-            const progressText = document.querySelector('.text-gray-500');
-            if (progressBar && progressText) {
-                progressBar.style.width = `${completion}%`;
-                progressText.textContent = `Profile ${completion}% completed`;
-            }
-        }
-
-        // Function to apply coupon
-        function applyCoupon(couponCode) {
-            // This could be expanded to handle different coupon codes
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg';
-            notification.textContent = 'Invalid coupon code';
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
-
-        // Function to handle order placement
-        function placeOrder() {
-            // Check if cart is empty
-            if (Object.keys(counterValues).length === 0) {
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Your cart is empty!';
-                document.body.appendChild(notification);
-                setTimeout(() => notification.remove(), 3000);
-                return;
-            }
-
-            const userProfile = initializeUserProfile();
-            if (!userProfile.addresses.home) {
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Please add a delivery address before placing order';
-                document.body.appendChild(notification);
-                setTimeout(() => notification.remove(), 3000);
-                return;
-            }
-
-            const totals = calculateOrderTotal();
-            const orderNumber = generateOrderNumber();
-            const orderDate = new Date().toISOString();
-
-            // Create new order
-            const newOrder = {
-                orderNumber: orderNumber,
-                date: orderDate,
-                status: 'Processing',
-                items: Object.keys(counterValues).map(productId => ({
-                    product: coffeeProducts.find(p => p.id === parseInt(productId)),
-                    quantity: counterValues[productId],
-                    size: sizeSelections[productId] || 'L'
-                })),
-                address: userProfile.addresses.home,
-                phone: userProfile.mobile,
-                totals: totals
-            };
-
-            // Get existing orders
-            const orders = initializeOrders();
-
-            // If there's a current order, move it to previous orders
-            if (orders.current) {
-                orders.previous.unshift(orders.current);
-            }
-
-            // Set new order as current
-            orders.current = newOrder;
-
-            // Save to localStorage
-            localStorage.setItem('orders', JSON.stringify(orders));
-
-            // Clear cart by resetting the objects
-            counterValues = {};
-            sizeSelections = {};
-
-            // Show success message
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-            notification.textContent = 'Order placed successfully!';
-            document.body.appendChild(notification);
-
-            // Redirect to clipboard page after a short delay
-            setTimeout(() => {
-                notification.remove();
-                selectCategory('clipboard');
-            }, 2000);
-        }
-
 
         // Add hover effect to nav items
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -679,66 +570,64 @@
         });
 
         // Function to render clipboard page
-        // Function to render clipboard page
         function renderClipboardPage() {
-            const orders = initializeOrders();
             const mainContent = document.querySelector('main');
-
             mainContent.innerHTML = `
         <div class="container mx-auto px-4 max-w-lg">
-            ${orders.current ? `
-                <!-- Current Order Section -->
-                <h2 class="text-xl font-semibold mb-4">Current Order</h2>
-                <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-                    <div class="space-y-3">
-                        <p class="font-medium">Order number: ${orders.current.orderNumber}</p>
-                        <p class="text-gray-600">${orders.current.status}</p>
-                        
-                        <!-- Status Steps -->
-                        <div class="space-y-2 my-4">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-4 h-4 ${orders.current.status === 'Processing' ? 'bg-black' : 'bg-gray-300'} rounded-full"></div>
-                                <span class="${orders.current.status === 'Processing' ? 'text-black' : 'text-gray-600'}">Processing</span>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <div class="w-4 h-4 ${orders.current.status === 'On the way' ? 'bg-black' : 'border-2 border-gray-300'} rounded-full"></div>
-                                <span class="${orders.current.status === 'On the way' ? 'text-black' : 'text-gray-600'}">On the way</span>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <div class="w-4 h-4 ${orders.current.status === 'Delivered' ? 'bg-black' : 'border-2 border-gray-300'} rounded-full"></div>
-                                <span class="${orders.current.status === 'Delivered' ? 'text-black' : 'text-gray-600'}">Delivered</span>
-                            </div>
-                        </div>
 
-                        <p class="font-medium">Total due: ${orders.current.totals.total} Taka</p>
-                        <p class="text-gray-600">Phone: ${orders.current.phone}</p>
-                        
-                        <!-- Action Buttons -->
-                        <div class="flex space-x-4 mt-4">
-                            <button onclick="cancelOrder()" class="flex-1 py-2 px-4 border border-black rounded-full hover:bg-gray-100 transition-colors">
-                                Cancel
-                            </button>
-                            <button class="flex-1 py-2 px-4 bg-black text-white rounded-full hover:bg-gray-800 transition-colors">
-                                Invoice
-                            </button>
+            <!-- Current Order Section -->
+            <h2 class="text-xl font-semibold mb-4">Current Order</h2>
+            <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                <div class="space-y-3">
+                    <p class="font-medium">Order number: 123456789</p>
+                    <p class="text-gray-600">In progress</p>
+                    
+                    <!-- Status Steps -->
+                    <div class="space-y-2 my-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-4 h-4 bg-black rounded-full"></div>
+                            <span>Processing</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-4 h-4 border-2 border-black bg-white rounded-full flex items-center justify-center">
+                                <div class="w-2 h-2 bg-black rounded-full"></div>
+                            </div>
+                            <span>On the way</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="w-4 h-4 border-2 border-gray-300 rounded-full"></div>
+                            <span class="text-gray-600">Delivered</span>
                         </div>
                     </div>
+
+                    <p class="font-medium">Total due: 600 Taka</p>
+                    <p class="text-gray-600">Phone: 01677552128</p>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-4 mt-4">
+                        <button class="flex-1 py-2 px-4 border border-black rounded-full hover:bg-gray-100 transition-colors">
+                            Cancel
+                        </button>
+                        <button class="flex-1 py-2 px-4 bg-black text-white rounded-full hover:bg-gray-800 transition-colors">
+                            Invoice
+                        </button>
+                    </div>
                 </div>
-            ` : ''}
+            </div>
 
             <!-- Previous Orders Section -->
             <h2 class="text-xl font-semibold mb-4">Previous Orders</h2>
             <div class="space-y-4">
-                ${orders.previous.map(order => `
+                ${[1, 2, 3].map(() => `
                     <div class="bg-white rounded-lg shadow-md p-4">
                         <div class="space-y-2">
-                            <p class="font-medium">Order number: ${order.orderNumber}</p>
-                            <p class="text-gray-600">Status: ${order.status}</p>
-                            <p class="font-medium">Total bill: ${order.totals.total} Taka</p>
+                            <p class="font-medium">Order number: 123456789</p>
+                            <p class="text-gray-600">Status: Delivered</p>
+                            <p class="font-medium">Total bill: 600 Taka</p>
                             
                             <!-- Action Buttons -->
                             <div class="flex space-x-4 mt-4">
-                                <button onclick="orderAgain(${order.orderNumber})" class="flex-1 py-2 px-4 border border-black rounded-full hover:bg-gray-100 transition-colors">
+                                <button class="flex-1 py-2 px-4 border border-black rounded-full hover:bg-gray-100 transition-colors">
                                     Order Again
                                 </button>
                                 <button class="flex-1 py-2 px-4 bg-black text-white rounded-full hover:bg-gray-800 transition-colors">
@@ -753,48 +642,11 @@
     `;
         }
 
-        // Function to calculate order total
-        function calculateOrderTotal() {
-            let subtotal = 0;
-            Object.keys(counterValues).forEach(productId => {
-                const product = coffeeProducts.find(p => p.id === parseInt(productId));
-                subtotal += product.price * counterValues[productId];
-            });
-
-            const vat = subtotal * 0.075;
-            const deliveryCharge = 60;
-            const discount = 45; // This could be made dynamic based on coupon logic
-
-            return {
-                subtotal: subtotal,
-                vat: Math.round(vat),
-                discount: discount,
-                deliveryCharge: deliveryCharge,
-                total: Math.round(subtotal + vat - discount + deliveryCharge)
-            };
+        // Add these helper functions for the status tracking
+        function updateOrderStatus(status) {
+            // You can implement status update logic here
+            console.log('Order status updated to:', status);
         }
-
-        // Optional: Function to order again
-        function orderAgain(orderNumber) {
-            const orders = initializeOrders();
-            const order = orders.previous.find(o => o.orderNumber === orderNumber);
-
-            if (order) {
-                // Reset cart
-                counterValues = {};
-                sizeSelections = {};
-
-                // Add items back to cart
-                order.items.forEach(item => {
-                    counterValues[item.product.id] = item.quantity;
-                    sizeSelections[item.product.id] = item.size;
-                });
-
-                // Navigate to cart
-                selectCategory('cart');
-            }
-        }
-
 
         // Add click handlers for the buttons
         document.addEventListener('click', function (e) {
@@ -815,142 +667,88 @@
 
 
         // Function to render user profile page
-
-        // Initialize user profile in local storage if it doesn't exist
-        function initializeUserProfile() {
-            if (!localStorage.getItem('userProfile')) {
-                const defaultProfile = {
-                    name: 'Saad Rahman',
-                    mobile: '01677552128',
-                    email: '',
-                    dateOfBirth: '',
-                    gender: '',
-                    addresses: {
-                        home: 'Apartment A/9, Teachers\' quarter, Dhaka commerce college, Mirpur, Dhaka 1216.',
-                        work: '',
-                        other: ''
-                    }
-                };
-                localStorage.setItem('userProfile', JSON.stringify(defaultProfile));
-            }
-            return JSON.parse(localStorage.getItem('userProfile'));
-        }
-
-        // Function to calculate profile completion percentage
-        function calculateProfileCompletion(userProfile) {
-            // Define required fields and their weights
-            const fields = {
-                mobile: userProfile.mobile,
-                email: userProfile.email,
-                dateOfBirth: userProfile.dateOfBirth,
-                gender: userProfile.gender,
-                homeAddress: userProfile.addresses.home,
-                workAddress: userProfile.addresses.work,
-                otherAddress: userProfile.addresses.other
-            };
-
-            // Count filled fields
-            let filledFields = 0;
-            const totalFields = Object.keys(fields).length;
-
-            for (const [key, value] of Object.entries(fields)) {
-                if (value && value.trim() !== '') {
-                    filledFields++;
-                }
-            }
-
-            return Math.round((filledFields / totalFields) * 100);
-        }
-
-        // Function to render user profile page
-        function renderUserPage(highlightAddress = '') {
-            const userProfile = initializeUserProfile();
-            const completion = calculateProfileCompletion(userProfile);
+        function renderUserPage() {
             const mainContent = document.querySelector('main');
-
             mainContent.innerHTML = `
         <div class="container mx-auto px-4 max-w-lg">
+            
             <!-- Profile Section -->
             <div class="flex flex-col items-center mb-8">
                 <div class="w-32 h-32 rounded-full overflow-hidden mb-4">
                     <img src="https://scontent-ord5-1.xx.fbcdn.net/v/t39.30808-6/369683372_10223279696361413_5507658032399956143_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=a5f93a&_nc_ohc=Ds7qR0HwIVsQ7kNvgGmUyqg&_nc_ht=scontent-ord5-1.xx&_nc_gid=A5dk0SoWLRww1_dqRFc2NE8&oh=00_AYDyVSB182nxcXnBfad1qjUKIRyP-NwV85nIn0QGbXl5cw&oe=6722E48F" alt="Profile Picture" class="w-full h-full object-cover">
                 </div>
-                <h2 class="text-xl font-semibold mb-2">${userProfile.name}</h2>
+                <h2 class="text-xl font-semibold mb-2">Saad Rahman</h2>
                 
                 <!-- Progress Bar -->
                 <div class="w-full max-w-xs mb-1">
                     <div class="w-full h-1.5 bg-gray-200 rounded-full">
-                        <div class="h-full bg-black rounded-full transition-all duration-300" style="width: ${completion}%"></div>
+                        <div class="w-3/4 h-full bg-black rounded-full"></div>
                     </div>
                 </div>
-                <p class="text-gray-500 text-sm">Profile ${completion}% completed</p>
+                <p class="text-gray-500 text-sm">Profile 75% completed</p>
             </div>
 
             <!-- Profile Form -->
-            <form id="profileForm" class="space-y-6">
+            <form class="space-y-6">
                 <div class="space-y-2">
                     <label class="block text-gray-700">Mobile Number</label>
-                    <input type="tel" name="mobile" value="${userProfile.mobile}" 
+                    <input type="tel" value="01677552128" 
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-black"
                         placeholder="Enter mobile number">
                 </div>
 
                 <div class="space-y-2">
                     <label class="block text-gray-700">Email</label>
-                    <input type="email" name="email" value="${userProfile.email}"
+                    <input type="email" 
                         class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-black"
                         placeholder="Enter email">
                 </div>
 
                 <div class="space-y-2">
                     <label class="block text-gray-700">Date of Birth</label>
-                    <input type="date" name="dateOfBirth" value="${userProfile.dateOfBirth}"
-                        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-black">
+                    <input type="text" 
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-black"
+                        placeholder="DD/MM/YYYY">
                 </div>
 
                 <div class="space-y-2">
                     <label class="block text-gray-700">Gender</label>
                     <div class="flex space-x-4">
                         <label class="flex items-center">
-                            <input type="radio" name="gender" value="male" ${userProfile.gender === 'male' ? 'checked' : ''} class="mr-2">
+                            <input type="radio" name="gender" value="male" class="mr-2">
                             <span>Male</span>
                         </label>
                         <label class="flex items-center">
-                            <input type="radio" name="gender" value="female" ${userProfile.gender === 'female' ? 'checked' : ''} class="mr-2">
+                            <input type="radio" name="gender" value="female" class="mr-2">
                             <span>Female</span>
                         </label>
                         <label class="flex items-center">
-                            <input type="radio" name="gender" value="other" ${userProfile.gender === 'other' ? 'checked' : ''} class="mr-2">
+                            <input type="radio" name="gender" value="other" class="mr-2">
                             <span>Other</span>
                         </label>
                     </div>
                 </div>
 
-                <!-- Address sections with highlighting -->
-                <div class="space-y-2 ${highlightAddress === 'home' ? 'bg-yellow-50 p-4 rounded-lg' : ''}">
+                <div class="space-y-2">
                     <label class="block text-gray-700">Address (Home)</label>
-                    <input type="text" name="homeAddress" value="${userProfile.addresses.home}"
-                        class="w-full px-4 py-2 rounded-lg border ${highlightAddress === 'home' ? 'border-yellow-400' : 'border-gray-300'} focus:outline-none focus:border-black"
-                        placeholder="Enter home address">
+                    <input type="text" 
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-black"
+                        placeholder="Enter address">
                 </div>
 
-                <div class="space-y-2 ${highlightAddress === 'work' ? 'bg-yellow-50 p-4 rounded-lg' : ''}">
+                <div class="space-y-2">
                     <label class="block text-gray-700">Address (Work)</label>
-                    <input type="text" name="workAddress" value="${userProfile.addresses.work}"
-                        class="w-full px-4 py-2 rounded-lg border ${highlightAddress === 'work' ? 'border-yellow-400' : 'border-gray-300'} focus:outline-none focus:border-black"
-                        placeholder="Enter work address">
+                    <input type="text" 
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-black"
+                        placeholder="Enter address">
                 </div>
 
-                <div class="space-y-2 ${highlightAddress === 'other' ? 'bg-yellow-50 p-4 rounded-lg' : ''}">
+                <div class="space-y-2">
                     <label class="block text-gray-700">Address (Other)</label>
-                    <input type="text" name="otherAddress" value="${userProfile.addresses.other}"
-                        class="w-full px-4 py-2 rounded-lg border ${highlightAddress === 'other' ? 'border-yellow-400' : 'border-gray-300'} focus:outline-none focus:border-black"
-                        placeholder="Enter other address">
+                    <input type="text" 
+                        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-black"
+                        placeholder="Enter address">
                 </div>
-
-                <button type="submit" class="w-full bg-black text-white py-3 rounded-full hover:bg-gray-800 transition-colors">
-                    Save Changes
-                </button>
 
                 <!-- Add some padding at the bottom for the floating navbar -->
                 <div class="h-24"></div>
@@ -958,196 +756,56 @@
         </div>
     `;
 
-            // Add form submission handler
-            const form = document.getElementById('profileForm');
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const formData = new FormData(form);
-                const userProfile = initializeUserProfile();
-
-                // Update the profile with form data
-                userProfile.mobile = formData.get('mobile');
-                userProfile.email = formData.get('email');
-                userProfile.dateOfBirth = formData.get('dateOfBirth');
-                userProfile.gender = formData.get('gender');
-                userProfile.addresses = {
-                    home: formData.get('homeAddress'),
-                    work: formData.get('workAddress'),
-                    other: formData.get('otherAddress')
-                };
-
-                // Save to localStorage
-                localStorage.setItem('userProfile', JSON.stringify(userProfile));
-
-                // Update progress bar immediately after save
-                const newCompletion = calculateProfileCompletion(userProfile);
-                const progressBar = document.querySelector('.bg-black');
-                const progressText = document.querySelector('.text-gray-500');
-
-                if (progressBar && progressText) {
-                    progressBar.style.width = `${newCompletion}%`;
-                    progressText.textContent = `Profile ${newCompletion}% completed`;
-                }
-
-                // Show success message
-                const notification = document.createElement('div');
-                notification.className =
-                    'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Profile updated successfully!';
-                document.body.appendChild(notification);
-
-                // Remove notification after 3 seconds
-                setTimeout(() => {
-                    notification.remove();
-                }, 3000);
-            });
-
-            // Add input event listeners to update progress in real-time
+            // Add event listeners for form validation and profile completion calculation
+            const form = mainContent.querySelector('form');
             const inputs = form.querySelectorAll('input');
+
             inputs.forEach(input => {
                 input.addEventListener('input', () => {
-                    const formData = new FormData(form);
-                    const tempProfile = {
-                        ...userProfile,
-                        mobile: formData.get('mobile'),
-                        email: formData.get('email'),
-                        dateOfBirth: formData.get('dateOfBirth'),
-                        gender: formData.get('gender'),
-                        addresses: {
-                            home: formData.get('homeAddress'),
-                            work: formData.get('workAddress'),
-                            other: formData.get('otherAddress')
-                        }
-                    };
-
-                    const newCompletion = calculateProfileCompletion(tempProfile);
-                    const progressBar = document.querySelector('.bg-black');
-                    const progressText = document.querySelector('.text-gray-500');
-
-                    if (progressBar && progressText) {
-                        progressBar.style.width = `${newCompletion}%`;
-                        progressText.textContent = `Profile ${newCompletion}% completed`;
-                    }
+                    calculateProfileCompletion();
                 });
             });
         }
 
+        // Function to calculate profile completion percentage
+        function calculateProfileCompletion() {
+            const form = document.querySelector('form');
+            const inputs = form.querySelectorAll('input:not([type="radio"])');
+            const radioGroups = new Set(Array.from(form.querySelectorAll('input[type="radio"]')).map(radio => radio
+                .name));
 
-        // Initialize orders in localStorage if they don't exist
-        function initializeOrders() {
-            if (!localStorage.getItem('orders')) {
-                localStorage.setItem('orders', JSON.stringify({
-                    current: null,
-                    previous: []
-                }));
-            }
-            return JSON.parse(localStorage.getItem('orders'));
-        }
+            let filled = 0;
+            let total = inputs.length + radioGroups.size;
 
-        // Function to generate order number
-        function generateOrderNumber() {
-            return Math.floor(100000000 + Math.random() * 900000000);
-        }
+            inputs.forEach(input => {
+                if (input.value.trim() !== '') filled++;
+            });
 
-        // Function to place order
-        function placeOrder() {
-            const userProfile = initializeUserProfile();
-            if (!userProfile.addresses.home) {
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Please add a delivery address before placing order';
-                document.body.appendChild(notification);
+            radioGroups.forEach(name => {
+                if (form.querySelector(`input[name="${name}"]:checked`)) filled++;
+            });
 
-                setTimeout(() => {
-                    notification.remove();
-                }, 3000);
-                return;
-            }
+            const percentage = Math.round((filled / total) * 100);
 
-            const totals = calculateOrderTotal();
-            const orderNumber = generateOrderNumber();
-            const orderDate = new Date().toISOString();
+            // Update the progress bar and text
+            const progressBar = document.querySelector('.bg-black');
+            const progressText = document.querySelector('.text-gray-500');
 
-            // Create new order
-            const newOrder = {
-                orderNumber: orderNumber,
-                date: orderDate,
-                status: 'Processing', // Initial status
-                items: Object.keys(counterValues).map(productId => ({
-                    product: coffeeProducts.find(p => p.id === parseInt(productId)),
-                    quantity: counterValues[productId],
-                    size: sizeSelections[productId] || 'L'
-                })),
-                address: userProfile.addresses.home,
-                phone: userProfile.mobile,
-                totals: totals
-            };
-
-            // Get existing orders
-            const orders = initializeOrders();
-
-            // If there's a current order, move it to previous orders
-            if (orders.current) {
-                orders.previous.unshift(orders.current);
-            }
-
-            // Set new order as current
-            orders.current = newOrder;
-
-            // Save to localStorage
-            localStorage.setItem('orders', JSON.stringify(orders));
-
-            // Clear cart
-            counterValues = {};
-            sizeSelections = {};
-
-            // Show success message
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-            notification.textContent = 'Order placed successfully!';
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.remove();
-                // Redirect to clipboard page to see order status
-                selectCategory('clipboard');
-            }, 2000);
-        }
-
-        // Function to cancel order
-        function cancelOrder() {
-            const orders = initializeOrders();
-            if (orders.current) {
-                // Move current order to previous orders with cancelled status
-                orders.current.status = 'Cancelled';
-                orders.previous.unshift(orders.current);
-                orders.current = null;
-
-                // Save to localStorage
-                localStorage.setItem('orders', JSON.stringify(orders));
-
-                // Show cancellation message
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Order cancelled successfully';
-                document.body.appendChild(notification);
-
-                setTimeout(() => {
-                    notification.remove();
-                    // Refresh clipboard page
-                    renderClipboardPage();
-                }, 2000);
+            if (progressBar && progressText) {
+                progressBar.style.width = `${percentage}%`;
+                progressText.textContent = `Profile ${percentage}% completed`;
             }
         }
 
+        // Function to render cart page
 
+        // Replace your existing renderCartPage function with this updated version
         function renderCartPage() {
-            const userProfile = initializeUserProfile();
             const mainContent = document.querySelector('main');
-            const totals = calculateOrderTotal();
-
             mainContent.innerHTML = `
         <div class="container mx-auto px-4 max-w-lg">
+            
+
             <!-- Cart Items -->
             <div class="space-y-4 mb-6">
                 ${Object.keys(counterValues).map(productId => {
@@ -1166,7 +824,7 @@
                                     <span class="text-gray-600">350 ml</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <button class="text-red-500 border border-red-500 rounded-full px-4 py-1" onclick="removeItem(${product.id})">
+                                    <button class="text-red-500 border border-red-500 rounded-full px-4 py-1">
                                         Remove
                                     </button>
                                     <div class="flex items-center space-x-3">
@@ -1186,13 +844,13 @@
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-2">
                     <h2 class="font-semibold">Address:</h2>
-                    <button onclick="editAddress()" class="hover:text-gray-600">
+                    <button>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
                     </button>
                 </div>
-                <p class="text-gray-600">${userProfile.addresses.home || 'No address set'}</p>
+                <p class="text-gray-600">Apartment A/9, Teachers' quarter, Dhaka commerce college, Mirpur, Dhaka 1216.</p>
             </div>
 
             <!-- Coupon Section -->
@@ -1211,215 +869,101 @@
             <div class="space-y-2 mb-6">
                 <div class="flex justify-between">
                     <span class="text-gray-600">Sub total</span>
-                    <span class="font-medium">${totals.subtotal} Taka</span>
+                    <span class="font-medium">450 Taka</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-gray-600">VAT (7.5%)</span>
-                    <span class="font-medium">${totals.vat} Taka</span>
+                    <span class="font-medium">34 Taka</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-gray-600">Discount</span>
-                    <span class="font-medium">${totals.discount} Taka</span>
+                    <span class="font-medium">45 Taka</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-gray-600">Delivery Charge</span>
-                    <span class="font-medium">${totals.deliveryCharge} Taka</span>
+                    <span class="font-medium">60 Taka</span>
                 </div>
                 <div class="flex justify-between pt-2 border-t">
                     <span class="font-semibold">Total</span>
-                    <span class="font-semibold">${totals.total} Taka</span>
+                    <span class="font-semibold">499 Taka</span>
                 </div>
             </div>
 
             <!-- Place Order Button -->
-            <button onclick="placeOrder()" class="w-full bg-black text-white py-3 rounded-full hover:bg-gray-800 transition-colors mb-24">
+            <button class="w-full bg-black text-white py-3 rounded-full hover:bg-gray-800 transition-colors mb-24">
                 Place Order
             </button>
         </div>
     `;
+
+            // Add event listeners for the cart functionality
+            attachCartEventListeners();
         }
 
+        // Function to attach cart event listeners
+        function attachCartEventListeners() {
+            // Add event listeners for remove buttons
+            document.querySelectorAll('.remove-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const productId = e.target.closest('[data-product-id]').dataset.productId;
+                    delete counterValues[productId];
+                    renderCartPage();
+                });
+            });
 
-        // Function to place order
-        function placeOrder() {
-            // Check if cart is empty
-            if (Object.keys(counterValues).length === 0) {
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Your cart is empty!';
-                document.body.appendChild(notification);
-                setTimeout(() => notification.remove(), 3000);
-                return;
+            // Add event listener for coupon application
+            const applyButton = document.querySelector('.apply-coupon');
+            if (applyButton) {
+                applyButton.addEventListener('click', () => {
+                    const couponInput = document.querySelector('input[placeholder="Coupon"]');
+                    applyCoupon(couponInput.value);
+                });
             }
 
-            const userProfile = initializeUserProfile();
-            if (!userProfile.addresses.home) {
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Please add a delivery address before placing order';
-                document.body.appendChild(notification);
-                setTimeout(() => notification.remove(), 3000);
-                return;
+            // Add event listener for place order button
+            const placeOrderButton = document.querySelector('.place-order-btn');
+            if (placeOrderButton) {
+                placeOrderButton.addEventListener('click', () => {
+                    placeOrder();
+                });
             }
+        }
 
-            const totals = calculateOrderTotal();
-            const orderNumber = generateOrderNumber();
-            const orderDate = new Date().toISOString();
+        // Function to calculate order summary
+        function calculateOrderSummary() {
+            const subtotal = Object.keys(counterValues).reduce((total, productId) => {
+                const product = coffeeProducts.find(p => p.id === parseInt(productId));
+                return total + (product.price * counterValues[productId]);
+            }, 0);
 
-            // Create new order
-            const newOrder = {
-                orderNumber: orderNumber,
-                date: orderDate,
-                status: 'Processing',
-                items: Object.keys(counterValues).map(productId => ({
-                    product: coffeeProducts.find(p => p.id === parseInt(productId)),
-                    quantity: counterValues[productId],
-                    size: sizeSelections[productId] || 'L'
-                })),
-                address: userProfile.addresses.home,
-                phone: userProfile.mobile,
-                totals: totals
+            const vat = subtotal * 0.075;
+            const discount = calculateDiscount(subtotal);
+            const deliveryCharge = 60;
+
+            return {
+                subtotal,
+                vat,
+                discount,
+                deliveryCharge,
+                total: subtotal + vat - discount + deliveryCharge
             };
-
-            // Get existing orders
-            const orders = initializeOrders();
-
-            // If there's a current order, move it to previous orders
-            if (orders.current) {
-                orders.previous.unshift(orders.current);
-            }
-
-            // Set new order as current
-            orders.current = newOrder;
-
-            // Save to localStorage
-            localStorage.setItem('orders', JSON.stringify(orders));
-
-            // Clear cart
-            counterValues = {};
-            sizeSelections = {};
-
-            // Show success message
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-            notification.textContent = 'Order placed successfully!';
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.remove();
-                selectCategory('clipboard');
-            }, 2000);
         }
 
-        // Function to generate order number
-        function generateOrderNumber() {
-            return Math.floor(100000000 + Math.random() * 900000000);
+        // Function to handle order placement
+        function placeOrder() {
+            // Implement order placement logic here
+            console.log('Order placed!');
         }
 
 
-        // Function to handle address editing
-        function editAddress() {
-            selectCategory('user');
-            setTimeout(() => renderUserPage('home'), 300);
-        }
-
-        // Function to remove item from cart
-        function removeItem(productId) {
-            delete counterValues[productId];
-            delete sizeSelections[productId];
-            renderCartPage();
-        }
+        // Function to render options page
 
 
-        // Update window.onload to initialize orders and show them
-        window.onload = () => {
-            // Initialize orders with demo data if needed
-            if (!localStorage.getItem('orders')) {
-                const demoOrders = {
-                    current: null,
-                    previous: [{
-                            orderNumber: 123456789,
-                            date: "2024-03-25T10:30:00Z",
-                            status: "Delivered",
-                            items: [{
-                                    product: coffeeProducts[0],
-                                    quantity: 2,
-                                    size: "M"
-                                },
-                                {
-                                    product: coffeeProducts[1],
-                                    quantity: 1,
-                                    size: "L"
-                                }
-                            ],
-                            address: "Apartment A/9, Teachers' quarter, Dhaka",
-                            phone: "01677552128",
-                            totals: {
-                                subtotal: 440,
-                                vat: 33,
-                                discount: 45,
-                                deliveryCharge: 60,
-                                total: 488
-                            }
-                        },
-                        {
-                            orderNumber: 123456790,
-                            date: "2024-03-24T15:45:00Z",
-                            status: "Delivered",
-                            items: [{
-                                product: coffeeProducts[2],
-                                quantity: 3,
-                                size: "S"
-                            }],
-                            address: "Apartment A/9, Teachers' quarter, Dhaka",
-                            phone: "01677552128",
-                            totals: {
-                                subtotal: 390,
-                                vat: 29,
-                                discount: 45,
-                                deliveryCharge: 60,
-                                total: 434
-                            }
-                        },
-                        {
-                            orderNumber: 123456791,
-                            date: "2024-03-23T09:15:00Z",
-                            status: "Cancelled",
-                            items: [{
-                                    product: coffeeProducts[3],
-                                    quantity: 1,
-                                    size: "L"
-                                },
-                                {
-                                    product: coffeeProducts[7],
-                                    quantity: 2,
-                                    size: "M"
-                                }
-                            ],
-                            address: "Apartment A/9, Teachers' quarter, Dhaka",
-                            phone: "01677552128",
-                            totals: {
-                                subtotal: 390,
-                                vat: 29,
-                                discount: 45,
-                                deliveryCharge: 60,
-                                total: 434
-                            }
-                        }
-                    ]
-                };
-                localStorage.setItem('orders', JSON.stringify(demoOrders));
-            }
 
-            // Render initial products
-            renderProducts('all');
-        };
 
-        // Optional: Add a helper function to clear cart (can be used elsewhere if needed)
-        function clearCart() {
-            counterValues = {};
-            sizeSelections = {};
-        }
+
+        // Initial render
+        window.onload = () => renderProducts('all');
     </script>
 
 </body>
