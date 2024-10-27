@@ -15,6 +15,36 @@
             background-color: #f8f9fa;
         }
 
+
+        .floating-cart-button {
+            position: fixed;
+            bottom: 100px;
+            /* Adjust this value to position it above the navbar */
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            /* Initial position (hidden) */
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px) saturate(80%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            z-index: 997;
+            opacity: 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .floating-cart-button.visible {
+            transform: translateX(-50%) translateY(0);
+            /* Visible position */
+            opacity: 1;
+        }
+
+        .floating-cart-button:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
         .content-wrapper {
             min-height: 100vh;
             padding-bottom: 100px;
@@ -22,25 +52,34 @@
 
         .floating-navbar {
             position: fixed;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
+            z-index: 998;
             transform: translateX(-50%);
             width: calc(100% - 40px);
             max-width: 500px;
-            border-radius: 20px;
+            border-radius: 9999px;
+            /* This makes it fully rounded/pill shaped */
             background-color: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(8px) saturate(80%);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
+        .floating-navbar nav {
+            padding: 1rem 1.5rem;
+            /* Slightly more horizontal padding */
+        }
+
         .floating-navbar svg {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
         }
 
         .nav-item {
             position: relative;
             transition: transform 0.3s ease;
+            z-index: 999;
+            /* Higher z-index than floating button */
         }
 
         .nav-item.active {
@@ -275,6 +314,9 @@
 
     <!-- <script src="App/Frontend/JS/script.js"></script> -->
     <script>
+        if (!window.cartStorage) {
+            window.cartStorage = [];
+        }
         // JSON data for coffee products
         const coffeeProducts = [{
                 id: 1,
@@ -411,6 +453,7 @@
         function incrementCounter(productId) {
             counterValues[productId] = (counterValues[productId] || 0) + 1;
             updateCounter(productId);
+            checkAndShowFloatingButton();
         }
 
         // Function to decrement counters
@@ -421,6 +464,16 @@
                 delete counterValues[productId];
             }
             updateCounter(productId);
+            checkAndShowFloatingButton();
+        }
+
+        function checkAndShowFloatingButton() {
+            const hasItems = Object.keys(counterValues).length > 0;
+            if (hasItems) {
+                showFloatingCartButton();
+            } else {
+                hideFloatingCartButton();
+            }
         }
 
         // Function to update counter display
@@ -470,47 +523,42 @@
         function selectCategory(category) {
             // Remove active class from all nav items
             const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach(item => item.classList.remove('active'));
+            navItems.forEach(item => {
+                item.classList.remove('active');
+            });
 
-            // Add active class to clicked nav item
-            const currentNavItem = event.currentTarget;
-            currentNavItem.classList.add('active');
+            // Add active class to selected nav item
+            const selectedItem = document.querySelector(`[data-category="${category}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('active');
+            }
 
             // Get the main content container
             const mainContent = document.querySelector('main');
-
-            // Add fade out animation
             mainContent.style.opacity = '0';
             mainContent.style.transform = 'translateY(10px)';
 
             // Wait for fade out, then update content
             setTimeout(() => {
-                // Reset main content class and add transition class
                 mainContent.className = 'container mx-auto px-4 py-8 page-transition';
 
-                // Render appropriate page based on category
-                switch (category) {
-                    case 'clipboard':
-                        renderClipboardPage();
-                        break;
-                    case 'user':
-                        renderUserPage();
-                        break;
-                    case 'cart':
-                        renderCartPage();
-                        break;
-                    case 'all':
-                        mainContent.innerHTML = `
-                    <h2 id="categoryTitle" class="text-2xl font-semibold mb-6 text-gray-800">All Items</h2>
-                    <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"></div>
-                `;
-                        renderProducts('all');
-                        break;
-                    case 'options':
-                        renderOptionsPage();
-                        break;
-                    default:
-                        renderProducts(category);
+                // Handle page content based on category
+                if (category === 'all') {
+                    mainContent.innerHTML = `
+                <h2 id="categoryTitle" class="text-2xl font-semibold mb-6 text-gray-800">All Items</h2>
+                <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            `;
+                    renderProducts('all');
+                } else if (category === 'cart') {
+                    renderCartPage();
+                } else if (category === 'clipboard') {
+                    renderClipboardPage();
+                } else if (category === 'user') {
+                    renderUserPage();
+                } else if (category === 'options') {
+                    renderOptionsPage();
+                } else {
+                    renderProducts(category);
                 }
 
                 // Fade in the new content
@@ -518,6 +566,7 @@
                 mainContent.style.transform = 'translateY(0)';
             }, 300);
         }
+
 
         // Calculate order total
         function calculateOrderTotal() {
@@ -663,10 +712,11 @@
 
         // Add event listeners to navbar items
         document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (event) => {
-                const category = event.currentTarget.dataset.category;
+            item.addEventListener('click', function (event) {
+                event.preventDefault();
+                const category = this.dataset.category;
                 selectCategory(category);
-                scrollToTop(); // Scroll to top when switching pages
+                scrollToTop();
             });
         });
 
@@ -755,22 +805,21 @@
 
         // Function to calculate order total
         function calculateOrderTotal() {
-            let subtotal = 0;
-            Object.keys(counterValues).forEach(productId => {
-                const product = coffeeProducts.find(p => p.id === parseInt(productId));
-                subtotal += product.price * counterValues[productId];
-            });
+            const subtotal = window.cartStorage.reduce((total, item) => {
+                const product = coffeeProducts.find(p => p.id === item.productId);
+                return total + (product.price * item.count);
+            }, 0);
 
-            const vat = subtotal * 0.075;
+            const vat = Math.round(subtotal * 0.075);
+            const discount = 45;
             const deliveryCharge = 60;
-            const discount = 45; // This could be made dynamic based on coupon logic
 
             return {
-                subtotal: subtotal,
-                vat: Math.round(vat),
-                discount: discount,
-                deliveryCharge: deliveryCharge,
-                total: Math.round(subtotal + vat - discount + deliveryCharge)
+                subtotal,
+                vat,
+                discount,
+                deliveryCharge,
+                total: subtotal + vat - discount + deliveryCharge
             };
         }
 
@@ -1140,20 +1189,14 @@
             }
         }
 
-
         function renderCartPage() {
-            const userProfile = initializeUserProfile();
             const mainContent = document.querySelector('main');
-            const totals = calculateOrderTotal();
-
             mainContent.innerHTML = `
         <div class="container mx-auto px-4 max-w-lg">
             <!-- Cart Items -->
             <div class="space-y-4 mb-6">
-                ${Object.keys(counterValues).map(productId => {
-                    const product = coffeeProducts.find(p => p.id === parseInt(productId));
-                    const count = counterValues[productId];
-                    const size = sizeSelections[productId] || 'L';
+                ${window.cartStorage.map(item => {
+                    const product = coffeeProducts.find(p => p.id === item.productId);
                     return `
                         <div class="bg-white rounded-lg p-4 flex items-center space-x-4">
                             <img src="${product.image}" alt="${product.name}" class="w-24 h-24 object-cover rounded-lg">
@@ -1161,20 +1204,18 @@
                                 <h3 class="font-semibold text-lg">${product.name}</h3>
                                 <div class="flex items-center space-x-2 my-2">
                                     <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-sm">
-                                        ${size}
+                                        ${item.size}
                                     </span>
                                     <span class="text-gray-600">350 ml</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <button class="text-red-500 border border-red-500 rounded-full px-4 py-1" onclick="removeItem(${product.id})">
+                                    <button class="text-red-500 border border-red-500 rounded-full px-4 py-1 remove-btn" 
+                                            data-product-id="${item.productId}" 
+                                            data-size="${item.size}">
                                         Remove
                                     </button>
-                                    <div class="flex items-center space-x-3">
-                                        <button class="text-black" onclick="decrementCounter(${product.id})">-</button>
-                                        <span class="w-8 text-center">${count}</span>
-                                        <button class="text-black" onclick="incrementCounter(${product.id})">+</button>
-                                    </div>
-                                    <span class="font-medium">${product.price} Taka</span>
+                                    <span class="w-8 text-center">${item.count}</span>
+                                    <span class="font-medium">${product.price * item.count} Taka</span>
                                 </div>
                             </div>
                         </div>
@@ -1186,13 +1227,13 @@
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-2">
                     <h2 class="font-semibold">Address:</h2>
-                    <button onclick="editAddress()" class="hover:text-gray-600">
+                    <button onclick="editAddress()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
                     </button>
                 </div>
-                <p class="text-gray-600">${userProfile.addresses.home || 'No address set'}</p>
+                <p class="text-gray-600">${initializeUserProfile().addresses.home || 'No address set'}</p>
             </div>
 
             <!-- Coupon Section -->
@@ -1201,7 +1242,7 @@
                 <div class="flex space-x-4">
                     <input type="text" placeholder="Coupon" 
                         class="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-black">
-                    <button class="px-6 py-2 border border-gray-300 rounded-full hover:bg-gray-50">
+                    <button class="px-6 py-2 border border-gray-300 rounded-full hover:bg-gray-50 apply-coupon">
                         Apply
                     </button>
                 </div>
@@ -1209,36 +1250,78 @@
 
             <!-- Order Summary -->
             <div class="space-y-2 mb-6">
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Sub total</span>
-                    <span class="font-medium">${totals.subtotal} Taka</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">VAT (7.5%)</span>
-                    <span class="font-medium">${totals.vat} Taka</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Discount</span>
-                    <span class="font-medium">${totals.discount} Taka</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Delivery Charge</span>
-                    <span class="font-medium">${totals.deliveryCharge} Taka</span>
-                </div>
-                <div class="flex justify-between pt-2 border-t">
-                    <span class="font-semibold">Total</span>
-                    <span class="font-semibold">${totals.total} Taka</span>
-                </div>
+                ${calculateOrderSummaryHTML()}
             </div>
 
             <!-- Place Order Button -->
-            <button onclick="placeOrder()" class="w-full bg-black text-white py-3 rounded-full hover:bg-gray-800 transition-colors mb-24">
+            <button class="w-full bg-black text-white py-3 rounded-full hover:bg-gray-800 transition-colors mb-24 place-order-btn">
                 Place Order
             </button>
         </div>
     `;
+
+            attachCartEventListeners();
         }
 
+
+        function attachCartEventListeners() {
+            // Remove button handlers
+            document.querySelectorAll('.remove-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const productId = parseInt(e.target.dataset.productId);
+                    const size = e.target.dataset.size;
+
+                    window.cartStorage = window.cartStorage.filter(item =>
+                        !(item.productId === productId && item.size === size)
+                    );
+
+                    renderCartPage();
+                });
+            });
+
+            // Coupon button handler
+            const applyButton = document.querySelector('.apply-coupon');
+            if (applyButton) {
+                applyButton.addEventListener('click', () => {
+                    const couponInput = document.querySelector('input[placeholder="Coupon"]');
+                    applyCoupon(couponInput.value);
+                });
+            }
+
+            // Place order button handler
+            const placeOrderButton = document.querySelector('.place-order-btn');
+            if (placeOrderButton) {
+                placeOrderButton.addEventListener('click', placeOrder);
+            }
+        }
+
+
+        // Add this new function for calculating order summary
+        function calculateOrderSummaryHTML() {
+            const totals = calculateOrderTotal();
+            return `
+        <div class="flex justify-between">
+            <span class="text-gray-600">Sub total</span>
+            <span class="font-medium">${totals.subtotal} Taka</span>
+        </div>
+        <div class="flex justify-between">
+            <span class="text-gray-600">VAT (7.5%)</span>
+            <span class="font-medium">${totals.vat} Taka</span>
+        </div>
+        <div class="flex justify-between">
+            <span class="text-gray-600">Discount</span>
+            <span class="font-medium">${totals.discount} Taka</span>
+        </div>
+        <div class="flex justify-between">
+            <span class="text-gray-600">Delivery Charge</span>
+            <span class="font-medium">${totals.deliveryCharge} Taka</span>
+        </div>
+        <div class="flex justify-between pt-2 border-t">
+            <span class="font-semibold">Total</span>
+            <span class="font-semibold">${totals.total} Taka</span>
+        </div>
+    `;
+        }
 
         // Function to place order
         function placeOrder() {
@@ -1311,6 +1394,91 @@
             }, 2000);
         }
 
+
+        // Add these new functions
+        function createFloatingCartButton() {
+            const existingButton = document.getElementById('floatingCartButton');
+            if (existingButton) {
+                existingButton.remove();
+            }
+
+            const button = document.createElement('div');
+            button.innerHTML = `
+        <button id="floatingCartButton" class="floating-cart-button">
+            Add to Cart
+        </button>
+    `;
+            document.body.appendChild(button.firstElementChild);
+
+            document.getElementById('floatingCartButton').addEventListener('click', handleAddToCart);
+        }
+
+        function showFloatingCartButton() {
+            const button = document.getElementById('floatingCartButton');
+            if (button) {
+                button.classList.add('visible');
+            } else {
+                createFloatingCartButton();
+                setTimeout(() => {
+                    document.getElementById('floatingCartButton').classList.add('visible');
+                }, 100);
+            }
+        }
+
+        function hideFloatingCartButton() {
+            const button = document.getElementById('floatingCartButton');
+            if (button) {
+                button.classList.remove('visible');
+            }
+        }
+
+        function handleAddToCart() {
+            const currentSelections = {
+                items: {
+                    ...counterValues
+                },
+                sizes: {
+                    ...sizeSelections
+                }
+            };
+
+            // Process each selected item
+            Object.entries(currentSelections.items).forEach(([productId, count]) => {
+                const size = currentSelections.sizes[productId] || 'L';
+                const existingItem = window.cartStorage.find(item =>
+                    item.productId === parseInt(productId) && item.size === size
+                );
+
+                if (existingItem) {
+                    // Update quantity if same item and size exists
+                    existingItem.count += count;
+                } else {
+                    // Add as new item
+                    window.cartStorage.push({
+                        productId: parseInt(productId),
+                        count: count,
+                        size: size
+                    });
+                }
+            });
+
+            // Clear current selections
+            Object.keys(counterValues).forEach(key => delete counterValues[key]);
+            Object.keys(sizeSelections).forEach(key => delete sizeSelections[key]);
+
+            // Update UI
+            renderProducts('all');
+            hideFloatingCartButton();
+
+            // Show success notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
+            notification.textContent = 'Items added to cart!';
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 2000);
+        }
+
+
         // Function to generate order number
         function generateOrderNumber() {
             return Math.floor(100000000 + Math.random() * 900000000);
@@ -1332,88 +1500,42 @@
 
 
         // Update window.onload to initialize orders and show them
-        window.onload = () => {
-            // Initialize orders with demo data if needed
-            if (!localStorage.getItem('orders')) {
-                const demoOrders = {
-                    current: null,
-                    previous: [{
-                            orderNumber: 123456789,
-                            date: "2024-03-25T10:30:00Z",
-                            status: "Delivered",
-                            items: [{
-                                    product: coffeeProducts[0],
-                                    quantity: 2,
-                                    size: "M"
-                                },
-                                {
-                                    product: coffeeProducts[1],
-                                    quantity: 1,
-                                    size: "L"
-                                }
-                            ],
-                            address: "Apartment A/9, Teachers' quarter, Dhaka",
-                            phone: "01677552128",
-                            totals: {
-                                subtotal: 440,
-                                vat: 33,
-                                discount: 45,
-                                deliveryCharge: 60,
-                                total: 488
-                            }
-                        },
-                        {
-                            orderNumber: 123456790,
-                            date: "2024-03-24T15:45:00Z",
-                            status: "Delivered",
-                            items: [{
-                                product: coffeeProducts[2],
-                                quantity: 3,
-                                size: "S"
-                            }],
-                            address: "Apartment A/9, Teachers' quarter, Dhaka",
-                            phone: "01677552128",
-                            totals: {
-                                subtotal: 390,
-                                vat: 29,
-                                discount: 45,
-                                deliveryCharge: 60,
-                                total: 434
-                            }
-                        },
-                        {
-                            orderNumber: 123456791,
-                            date: "2024-03-23T09:15:00Z",
-                            status: "Cancelled",
-                            items: [{
-                                    product: coffeeProducts[3],
-                                    quantity: 1,
-                                    size: "L"
-                                },
-                                {
-                                    product: coffeeProducts[7],
-                                    quantity: 2,
-                                    size: "M"
-                                }
-                            ],
-                            address: "Apartment A/9, Teachers' quarter, Dhaka",
-                            phone: "01677552128",
-                            totals: {
-                                subtotal: 390,
-                                vat: 29,
-                                discount: 45,
-                                deliveryCharge: 60,
-                                total: 434
-                            }
-                        }
-                    ]
-                };
-                localStorage.setItem('orders', JSON.stringify(demoOrders));
+        window.onload = function () {
+            // Initialize cart storage if it doesn't exist
+            if (!window.cartStorage) {
+                window.cartStorage = [];
             }
 
-            // Render initial products
+            // Create floating cart button
+            createFloatingCartButton();
+
+            // Initialize orders with demo data if needed
+            if (!localStorage.getItem('orders')) {
+                // Your existing demo orders initialization code
+            }
+
+            // Initial render
             renderProducts('all');
+
+            // Add click handlers for size options
+            document.querySelectorAll('.size-option').forEach(option => {
+                option.addEventListener('click', (event) => {
+                    const size = event.currentTarget.dataset.size;
+                    selectSize(size);
+                });
+            });
+
+            // Initialize navigation event listeners
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    const category = this.dataset.category;
+                    selectCategory(category);
+                    scrollToTop();
+                });
+            });
         };
+
 
         // Optional: Add a helper function to clear cart (can be used elsewhere if needed)
         function clearCart() {
