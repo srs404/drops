@@ -207,6 +207,125 @@
             background-color: rgba(0, 0, 0, 0.8);
         }
 
+        .cart-item {
+            display: flex;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin: 16px 0;
+            border-radius: 0.5rem;
+            min-height: 120px;
+            /* Set minimum height instead of fixed height */
+        }
+
+        .cart-item-image {
+            width: 120px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            object-fit: cover;
+            height: 100%;
+        }
+
+        .cart-item-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 100%;
+            padding: 1rem;
+            margin-left: 120px;
+            /* Equal to image width */
+        }
+
+
+        /* Address Modal Styles */
+        .address-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .address-modal.active {
+            display: flex;
+        }
+
+        .address-modal-content {
+            background-color: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .coupon-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @media (min-width: 640px) {
+            .coupon-section {
+                flex-direction: row;
+            }
+
+            .coupon-input {
+                flex: 1;
+            }
+        }
+
+
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .scale-animation {
+            animation: scaleIn 0.3s ease-out forwards;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -217,6 +336,10 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        .page-transition {
+            animation: fadeIn 0.3s ease-in-out;
         }
 
         @media (min-width: 768px) {
@@ -309,6 +432,25 @@
             <button class="size-option" data-size="S">Small</button>
             <button class="size-option" data-size="M">Medium</button>
             <button class="size-option" data-size="L">Large</button>
+        </div>
+    </div>
+
+    <!-- Address Edit Modal -->
+    <div id="addressModal" class="address-modal">
+        <div class="address-modal-content">
+            <button class="modal-close-btn" onclick="closeAddressModal()">&times;</button>
+            <h3 class="text-xl font-semibold mb-4">Edit Delivery Address</h3>
+            <textarea id="addressInput"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-black resize-none h-32 mb-4"></textarea>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeAddressModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-full hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button onclick="saveAddress()" class="px-4 py-2 bg-black text-white rounded-full hover:bg-gray-800">
+                    Save Address
+                </button>
+            </div>
         </div>
     </div>
 
@@ -492,10 +634,11 @@
         }
 
         // Function to open size selection popup
-        function openSizePopup(productId) {
+        function openSizePopup(productId, isCart = false) {
             const popup = document.getElementById('sizePopup');
-            popup.classList.add('active');
             popup.dataset.productId = productId;
+            popup.dataset.isCart = isCart; // Add this to track context
+            popup.classList.add('active');
         }
 
         // Function to close size selection popup
@@ -508,8 +651,21 @@
         function selectSize(size) {
             const popup = document.getElementById('sizePopup');
             const productId = parseInt(popup.dataset.productId);
-            sizeSelections[productId] = size;
-            updateSizeButton(productId);
+            const isCart = popup.dataset.isCart === 'true';
+
+            if (isCart) {
+                // Update size in cart
+                const cartItem = window.cartStorage.find(item => item.productId === productId);
+                if (cartItem) {
+                    cartItem.size = size;
+                    renderCartPage();
+                }
+            } else {
+                // Update size in product grid
+                sizeSelections[productId] = size;
+                updateSizeButton(productId);
+            }
+
             closeSizePopup();
         }
 
@@ -567,28 +723,35 @@
             }, 300);
         }
 
+        function updateProgressDisplay(completion) {
+            const progressBar = document.querySelector('.progress-bar-fill');
+            const progressText = document.querySelector('.profile-completion-text');
+
+            if (progressBar && progressText) {
+                progressBar.style.width = `${completion}%`;
+                progressText.textContent = `Profile ${completion}% completed`;
+            }
+        }
 
         // Calculate order total
         function calculateOrderTotal() {
-            let subtotal = 0;
-            Object.keys(counterValues).forEach(productId => {
-                const product = coffeeProducts.find(p => p.id === parseInt(productId));
-                subtotal += product.price * counterValues[productId];
-            });
+            const subtotal = window.cartStorage.reduce((total, item) => {
+                const product = coffeeProducts.find(p => p.id === item.productId);
+                return total + (product.price * item.count);
+            }, 0);
 
-            const vat = subtotal * 0.075;
+            const vat = Math.round(subtotal * 0.075);
+            const discount = 45;
             const deliveryCharge = 60;
-            const discount = 45; // This could be made dynamic based on coupon logic
 
             return {
-                subtotal: subtotal,
-                vat: Math.round(vat),
-                discount: discount,
-                deliveryCharge: deliveryCharge,
-                total: Math.round(subtotal + vat - discount + deliveryCharge)
+                subtotal,
+                vat,
+                discount,
+                deliveryCharge,
+                total: subtotal + vat - discount + deliveryCharge
             };
         }
-
 
 
         // Update progress bar
@@ -613,79 +776,6 @@
                 notification.remove();
             }, 3000);
         }
-
-        // Function to handle order placement
-        function placeOrder() {
-            // Check if cart is empty
-            if (Object.keys(counterValues).length === 0) {
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Your cart is empty!';
-                document.body.appendChild(notification);
-                setTimeout(() => notification.remove(), 3000);
-                return;
-            }
-
-            const userProfile = initializeUserProfile();
-            if (!userProfile.addresses.home) {
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Please add a delivery address before placing order';
-                document.body.appendChild(notification);
-                setTimeout(() => notification.remove(), 3000);
-                return;
-            }
-
-            const totals = calculateOrderTotal();
-            const orderNumber = generateOrderNumber();
-            const orderDate = new Date().toISOString();
-
-            // Create new order
-            const newOrder = {
-                orderNumber: orderNumber,
-                date: orderDate,
-                status: 'Processing',
-                items: Object.keys(counterValues).map(productId => ({
-                    product: coffeeProducts.find(p => p.id === parseInt(productId)),
-                    quantity: counterValues[productId],
-                    size: sizeSelections[productId] || 'L'
-                })),
-                address: userProfile.addresses.home,
-                phone: userProfile.mobile,
-                totals: totals
-            };
-
-            // Get existing orders
-            const orders = initializeOrders();
-
-            // If there's a current order, move it to previous orders
-            if (orders.current) {
-                orders.previous.unshift(orders.current);
-            }
-
-            // Set new order as current
-            orders.current = newOrder;
-
-            // Save to localStorage
-            localStorage.setItem('orders', JSON.stringify(orders));
-
-            // Clear cart by resetting the objects
-            counterValues = {};
-            sizeSelections = {};
-
-            // Show success message
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-            notification.textContent = 'Order placed successfully!';
-            document.body.appendChild(notification);
-
-            // Redirect to clipboard page after a short delay
-            setTimeout(() => {
-                notification.remove();
-                selectCategory('clipboard');
-            }, 2000);
-        }
-
 
         // Add hover effect to nav items
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -887,7 +977,6 @@
 
         // Function to calculate profile completion percentage
         function calculateProfileCompletion(userProfile) {
-            // Define required fields and their weights
             const fields = {
                 mobile: userProfile.mobile,
                 email: userProfile.email,
@@ -898,7 +987,6 @@
                 otherAddress: userProfile.addresses.other
             };
 
-            // Count filled fields
             let filledFields = 0;
             const totalFields = Object.keys(fields).length;
 
@@ -921,18 +1009,42 @@
         <div class="container mx-auto px-4 max-w-lg">
             <!-- Profile Section -->
             <div class="flex flex-col items-center mb-8">
-                <div class="w-32 h-32 rounded-full overflow-hidden mb-4">
-                    <img src="https://scontent-ord5-1.xx.fbcdn.net/v/t39.30808-6/369683372_10223279696361413_5507658032399956143_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=a5f93a&_nc_ohc=Ds7qR0HwIVsQ7kNvgGmUyqg&_nc_ht=scontent-ord5-1.xx&_nc_gid=A5dk0SoWLRww1_dqRFc2NE8&oh=00_AYDyVSB182nxcXnBfad1qjUKIRyP-NwV85nIn0QGbXl5cw&oe=6722E48F" alt="Profile Picture" class="w-full h-full object-cover">
+                <!-- Profile Picture with Edit Button -->
+                <div class="relative w-32 h-32 group">
+                    <div class="w-32 h-32 rounded-full overflow-hidden mb-4">
+                        <img src="${userProfile.image || 'https://scontent-ord5-1.xx.fbcdn.net/v/t39.30808-6/369683372_10223279696361413_5507658032399956143_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=a5f93a&_nc_ohc=Ds7qR0HwIVsQ7kNvgGmUyqg&_nc_ht=scontent-ord5-1.xx&_nc_gid=A5dk0SoWLRww1_dqRFc2NE8&oh=00_AYDyVSB182nxcXnBfad1qjUKIRyP-NwV85nIn0QGbXl5cw&oe=6722E48F'}" 
+                             alt="Profile Picture" 
+                             class="w-full h-full object-cover">
+                    </div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-50 rounded-full cursor-pointer"
+                         onclick="openImageUpload()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <input type="file" 
+                           id="profileImageInput" 
+                           accept="image/*" 
+                           class="hidden" 
+                           onchange="handleImageUpload(event)">
                 </div>
-                <h2 class="text-xl font-semibold mb-2">${userProfile.name}</h2>
+
+                <!-- Editable Name -->
+                <div class="flex items-center space-x-2 mb-2">
+                    <input type="text" 
+                           value="${userProfile.name}"
+                           class="text-xl font-semibold text-center bg-transparent border-b border-transparent hover:border-gray-300 focus:border-black focus:outline-none transition-colors"
+                           onchange="updateProfileName(event)">
+                </div>
                 
                 <!-- Progress Bar -->
-                <div class="w-full max-w-xs mb-1">
-                    <div class="w-full h-1.5 bg-gray-200 rounded-full">
-                        <div class="h-full bg-black rounded-full transition-all duration-300" style="width: ${completion}%"></div>
-                    </div>
-                </div>
-                <p class="text-gray-500 text-sm">Profile ${completion}% completed</p>
+<div class="w-full max-w-xs mb-1">
+    <div class="w-full h-1.5 bg-gray-200 rounded-full">
+        <div class="progress-bar-fill h-full bg-black rounded-full transition-all duration-300" style="width: ${completion}%"></div>
+    </div>
+</div>
+<p class="text-gray-500 text-sm profile-completion-text">Profile ${completion}% completed</p>
             </div>
 
             <!-- Profile Form -->
@@ -975,7 +1087,6 @@
                     </div>
                 </div>
 
-                <!-- Address sections with highlighting -->
                 <div class="space-y-2 ${highlightAddress === 'home' ? 'bg-yellow-50 p-4 rounded-lg' : ''}">
                     <label class="block text-gray-700">Address (Home)</label>
                     <input type="text" name="homeAddress" value="${userProfile.addresses.home}"
@@ -1028,15 +1139,9 @@
                 // Save to localStorage
                 localStorage.setItem('userProfile', JSON.stringify(userProfile));
 
-                // Update progress bar immediately after save
+                // Update progress display
                 const newCompletion = calculateProfileCompletion(userProfile);
-                const progressBar = document.querySelector('.bg-black');
-                const progressText = document.querySelector('.text-gray-500');
-
-                if (progressBar && progressText) {
-                    progressBar.style.width = `${newCompletion}%`;
-                    progressText.textContent = `Profile ${newCompletion}% completed`;
-                }
+                updateProgressDisplay(newCompletion);
 
                 // Show success message
                 const notification = document.createElement('div');
@@ -1045,13 +1150,12 @@
                 notification.textContent = 'Profile updated successfully!';
                 document.body.appendChild(notification);
 
-                // Remove notification after 3 seconds
                 setTimeout(() => {
                     notification.remove();
                 }, 3000);
             });
 
-            // Add input event listeners to update progress in real-time
+            // Add input event listeners for real-time progress updates
             const inputs = form.querySelectorAll('input');
             inputs.forEach(input => {
                 input.addEventListener('input', () => {
@@ -1070,17 +1174,10 @@
                     };
 
                     const newCompletion = calculateProfileCompletion(tempProfile);
-                    const progressBar = document.querySelector('.bg-black');
-                    const progressText = document.querySelector('.text-gray-500');
-
-                    if (progressBar && progressText) {
-                        progressBar.style.width = `${newCompletion}%`;
-                        progressText.textContent = `Profile ${newCompletion}% completed`;
-                    }
+                    updateProgressDisplay(newCompletion);
                 });
             });
         }
-
 
         // Initialize orders in localStorage if they don't exist
         function initializeOrders() {
@@ -1098,69 +1195,76 @@
             return Math.floor(100000000 + Math.random() * 900000000);
         }
 
-        // Function to place order
-        function placeOrder() {
+        // Function to open file input when clicking the camera icon
+        function openImageUpload() {
+            document.getElementById('profileImageInput').click();
+        }
+
+        // Function to handle image upload
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const userProfile = initializeUserProfile();
+                    userProfile.image = e.target.result;
+                    localStorage.setItem('userProfile', JSON.stringify(userProfile));
+
+                    // Refresh the profile page
+                    renderUserPage();
+
+                    // Show success notification
+                    const notification = document.createElement('div');
+                    notification.className =
+                        'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
+                    notification.textContent = 'Profile picture updated successfully!';
+                    document.body.appendChild(notification);
+                    setTimeout(() => notification.remove(), 3000);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Function to update profile name
+        function updateProfileName(event) {
+            const newName = event.target.value;
             const userProfile = initializeUserProfile();
-            if (!userProfile.addresses.home) {
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
-                notification.textContent = 'Please add a delivery address before placing order';
-                document.body.appendChild(notification);
+            userProfile.name = newName;
+            localStorage.setItem('userProfile', JSON.stringify(userProfile));
 
-                setTimeout(() => {
-                    notification.remove();
-                }, 3000);
-                return;
-            }
-
-            const totals = calculateOrderTotal();
-            const orderNumber = generateOrderNumber();
-            const orderDate = new Date().toISOString();
-
-            // Create new order
-            const newOrder = {
-                orderNumber: orderNumber,
-                date: orderDate,
-                status: 'Processing', // Initial status
-                items: Object.keys(counterValues).map(productId => ({
-                    product: coffeeProducts.find(p => p.id === parseInt(productId)),
-                    quantity: counterValues[productId],
-                    size: sizeSelections[productId] || 'L'
-                })),
-                address: userProfile.addresses.home,
-                phone: userProfile.mobile,
-                totals: totals
-            };
-
-            // Get existing orders
-            const orders = initializeOrders();
-
-            // If there's a current order, move it to previous orders
-            if (orders.current) {
-                orders.previous.unshift(orders.current);
-            }
-
-            // Set new order as current
-            orders.current = newOrder;
-
-            // Save to localStorage
-            localStorage.setItem('orders', JSON.stringify(orders));
-
-            // Clear cart
-            counterValues = {};
-            sizeSelections = {};
-
-            // Show success message
+            // Show success notification
             const notification = document.createElement('div');
             notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-            notification.textContent = 'Order placed successfully!';
+            notification.textContent = 'Name updated successfully!';
             document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
 
-            setTimeout(() => {
-                notification.remove();
-                // Redirect to clipboard page to see order status
-                selectCategory('clipboard');
-            }, 2000);
+        // Function to focus the name input
+        function focusNameInput() {
+            const nameInput = document.querySelector('input[type="text"]');
+            nameInput.focus();
+        }
+
+        // Update the initializeUserProfile function to include image
+        function initializeUserProfile() {
+            if (!localStorage.getItem('userProfile')) {
+                const defaultProfile = {
+                    name: 'Saad Rahman',
+                    image: 'https://scontent-ord5-1.xx.fbcdn.net/v/t39.30808-6/369683372_10223279696361413_5507658032399956143_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=a5f93a&_nc_ohc=Ds7qR0HwIVsQ7kNvgGmUyqg&_nc_ht=scontent-ord5-1.xx&_nc_gid=A5dk0SoWLRww1_dqRFc2NE8&oh=00_AYDyVSB182nxcXnBfad1qjUKIRyP-NwV85nIn0QGbXl5cw&oe=6722E48F',
+                    mobile: '01677552128',
+                    email: '',
+                    dateOfBirth: '',
+                    gender: '',
+                    addresses: {
+                        home: 'Apartment A/9, Teachers\' quarter, Dhaka commerce college, Mirpur, Dhaka 1216.',
+                        work: '',
+                        other: ''
+                    }
+                };
+                localStorage.setItem('userProfile', JSON.stringify(defaultProfile));
+            }
+            return JSON.parse(localStorage.getItem('userProfile'));
         }
 
         // Function to cancel order
@@ -1197,29 +1301,41 @@
             <div class="space-y-4 mb-6">
                 ${window.cartStorage.map(item => {
                     const product = coffeeProducts.find(p => p.id === item.productId);
+                    if (!product) return '';
+                    
                     return `
-                        <div class="bg-white rounded-lg p-4 flex items-center space-x-4">
-                            <img src="${product.image}" alt="${product.name}" class="w-24 h-24 object-cover rounded-lg">
-                            <div class="flex-1">
-                                <h3 class="font-semibold text-lg">${product.name}</h3>
-                                <div class="flex items-center space-x-2 my-2">
-                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-sm">
-                                        ${item.size}
-                                    </span>
-                                    <span class="text-gray-600">350 ml</span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <button class="text-red-500 border border-red-500 rounded-full px-4 py-1 remove-btn" 
-                                            data-product-id="${item.productId}" 
-                                            data-size="${item.size}">
-                                        Remove
-                                    </button>
-                                    <span class="w-8 text-center">${item.count}</span>
-                                    <span class="font-medium">${product.price * item.count} Taka</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+    <div class="bg-white rounded-lg cart-item">
+        <!-- Remove button (X) -->
+        <button class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg z-10"
+                onclick="removeFromCart(${item.productId}, '${item.size}')">
+            ×
+        </button>
+        
+        <img src="${product.image}" 
+             alt="${product.name}" 
+             class="cart-item-image rounded-l-lg">
+        <div class="cart-item-content">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+    <span class="text-base">${product.name}</span>
+    <span class="text-base font-bold whitespace-nowrap ml-2">${product.price * item.count} <br>Taka</span>
+</div>
+                <span class="text-gray-600 block mb-3">350 ml</span>
+            </div>
+            <div class="flex justify-between items-center">
+<button onclick="openSizePopup(${item.productId}, true)" 
+        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-sm hover:bg-gray-300 transition-colors">
+    ${item.size || 'L'}
+</button>
+                <div class="flex items-center space-x-3 bg-gray-100 rounded-full px-2">
+                    <button class="text-black p-1" onclick="updateCartQuantity(${item.productId}, ${item.count - 1}, '${item.size}')">-</button>
+                    <span class="w-8 text-center">${item.count}</span>
+                    <button class="text-black p-1" onclick="updateCartQuantity(${item.productId}, ${item.count + 1}, '${item.size}')">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
                 }).join('')}
             </div>
 
@@ -1239,10 +1355,10 @@
             <!-- Coupon Section -->
             <div class="mb-6">
                 <p class="mb-2">Do you have a coupon?</p>
-                <div class="flex space-x-4">
+                <div class="flex flex-col sm:flex-row gap-2">
                     <input type="text" placeholder="Coupon" 
                         class="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-black">
-                    <button class="px-6 py-2 border border-gray-300 rounded-full hover:bg-gray-50 apply-coupon">
+                    <button class="px-6 py-2 border border-gray-300 rounded-full hover:bg-gray-50 whitespace-nowrap">
                         Apply
                     </button>
                 </div>
@@ -1254,14 +1370,51 @@
             </div>
 
             <!-- Place Order Button -->
-            <button class="w-full bg-black text-white py-3 rounded-full hover:bg-gray-800 transition-colors mb-24 place-order-btn">
+            <button onclick="placeOrder()" class="w-full bg-black text-white py-3 rounded-full hover:bg-gray-800 transition-colors mb-24">
                 Place Order
             </button>
         </div>
     `;
-
-            attachCartEventListeners();
         }
+
+
+        function initializeSizeOptions() {
+            document.querySelectorAll('.size-option').forEach(option => {
+                option.addEventListener('click', (event) => {
+                    const size = event.currentTarget.dataset.size;
+                    selectSize(size);
+                });
+            });
+        }
+
+        function removeFromCart(productId, size) {
+            window.cartStorage = window.cartStorage.filter(
+                item => !(item.productId === productId && item.size === size)
+            );
+            renderCartPage();
+        }
+
+        function updateCartQuantity(productId, newCount, size) {
+            if (newCount <= 0) {
+                removeFromCart(productId, size);
+                return;
+            }
+
+            const item = window.cartStorage.find(
+                item => item.productId === productId && item.size === size
+            );
+
+            if (item) {
+                item.count = newCount;
+                renderCartPage();
+            }
+        }
+
+        // Helper function to check if cart is empty
+        function isCartEmpty() {
+            return !window.cartStorage || window.cartStorage.length === 0;
+        }
+
 
 
         function attachCartEventListeners() {
@@ -1325,8 +1478,7 @@
 
         // Function to place order
         function placeOrder() {
-            // Check if cart is empty
-            if (Object.keys(counterValues).length === 0) {
+            if (isCartEmpty()) {
                 const notification = document.createElement('div');
                 notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg';
                 notification.textContent = 'Your cart is empty!';
@@ -1345,54 +1497,75 @@
                 return;
             }
 
+            // Create order
             const totals = calculateOrderTotal();
             const orderNumber = generateOrderNumber();
             const orderDate = new Date().toISOString();
-
-            // Create new order
             const newOrder = {
                 orderNumber: orderNumber,
                 date: orderDate,
                 status: 'Processing',
-                items: Object.keys(counterValues).map(productId => ({
-                    product: coffeeProducts.find(p => p.id === parseInt(productId)),
-                    quantity: counterValues[productId],
-                    size: sizeSelections[productId] || 'L'
+                items: window.cartStorage.map(item => ({
+                    product: coffeeProducts.find(p => p.id === item.productId),
+                    quantity: item.count,
+                    size: item.size
                 })),
                 address: userProfile.addresses.home,
                 phone: userProfile.mobile,
                 totals: totals
             };
 
-            // Get existing orders
+            // Save order
             const orders = initializeOrders();
-
-            // If there's a current order, move it to previous orders
             if (orders.current) {
                 orders.previous.unshift(orders.current);
             }
-
-            // Set new order as current
             orders.current = newOrder;
-
-            // Save to localStorage
             localStorage.setItem('orders', JSON.stringify(orders));
 
             // Clear cart
-            counterValues = {};
-            sizeSelections = {};
+            window.cartStorage = [];
 
-            // Show success message
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
-            notification.textContent = 'Order placed successfully!';
-            document.body.appendChild(notification);
+            // Create and animate success overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            overlay.innerHTML = `
+        <div class="bg-white rounded-lg p-6 transform scale-0 transition-transform duration-300 ease-out">
+            <svg class="w-16 h-16 mx-auto text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <p class="text-xl font-semibold text-center">Order Placed Successfully!</p>
+            <p class="text-gray-600 text-center mt-2">Order #${orderNumber}</p>
+        </div>
+    `;
+            document.body.appendChild(overlay);
 
+            // Animate the success message
             setTimeout(() => {
-                notification.remove();
-                selectCategory('clipboard');
+                const messageBox = overlay.querySelector('div');
+                messageBox.classList.remove('scale-0');
+                messageBox.classList.add('scale-100');
+            }, 100);
+
+            // After animation, redirect to clipboard page
+            setTimeout(() => {
+                overlay.classList.add('opacity-0');
+                setTimeout(() => {
+                    overlay.remove();
+                    selectCategory('clipboard');
+
+                    // Highlight the new order
+                    const orderElement = document.querySelector('.current-order');
+                    if (orderElement) {
+                        orderElement.classList.add('animate-pulse');
+                        setTimeout(() => {
+                            orderElement.classList.remove('animate-pulse');
+                        }, 2000);
+                    }
+                }, 300);
             }, 2000);
         }
+
 
 
         // Add these new functions
@@ -1433,32 +1606,37 @@
         }
 
         function handleAddToCart() {
-            const currentSelections = {
-                items: {
-                    ...counterValues
-                },
-                sizes: {
-                    ...sizeSelections
-                }
-            };
+            const currentSelections = Object.entries(counterValues);
+
+            // Check if there are items to add
+            if (currentSelections.length === 0) {
+                return;
+            }
 
             // Process each selected item
-            Object.entries(currentSelections.items).forEach(([productId, count]) => {
-                const size = currentSelections.sizes[productId] || 'L';
-                const existingItem = window.cartStorage.find(item =>
-                    item.productId === parseInt(productId) && item.size === size
-                );
+            currentSelections.forEach(([productId, count]) => {
+                const numericId = parseInt(productId);
+                const size = sizeSelections[productId] || 'L';
+                const product = coffeeProducts.find(p => p.id === numericId);
 
-                if (existingItem) {
-                    // Update quantity if same item and size exists
-                    existingItem.count += count;
-                } else {
-                    // Add as new item
-                    window.cartStorage.push({
-                        productId: parseInt(productId),
-                        count: count,
-                        size: size
-                    });
+                if (product) {
+                    // Check if item with same ID and size exists
+                    const existingItem = window.cartStorage.find(
+                        item => item.productId === numericId && item.size === size
+                    );
+
+                    if (existingItem) {
+                        // Update existing item quantity
+                        existingItem.count += count;
+                    } else {
+                        // Add new item
+                        window.cartStorage.push({
+                            productId: numericId,
+                            count: count,
+                            size: size,
+                            price: product.price
+                        });
+                    }
                 }
             });
 
@@ -1466,15 +1644,19 @@
             Object.keys(counterValues).forEach(key => delete counterValues[key]);
             Object.keys(sizeSelections).forEach(key => delete sizeSelections[key]);
 
-            // Update UI
-            renderProducts('all');
-            hideFloatingCartButton();
-
             // Show success notification
             const notification = document.createElement('div');
             notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
             notification.textContent = 'Items added to cart!';
             document.body.appendChild(notification);
+
+            // Update UI
+            renderProducts('all');
+            hideFloatingCartButton();
+
+            // Log cart contents (for debugging)
+            console.log('Cart contents:', window.cartStorage);
+
             setTimeout(() => notification.remove(), 2000);
         }
 
@@ -1499,6 +1681,45 @@
         }
 
 
+        // Add these functions to your existing JavaScript
+        function editAddress() {
+            const modal = document.getElementById('addressModal');
+            const addressInput = document.getElementById('addressInput');
+            const userProfile = initializeUserProfile();
+
+            // Set current address in textarea
+            addressInput.value = userProfile.addresses.home || '';
+
+            // Show modal
+            modal.classList.add('active');
+        }
+
+        function closeAddressModal() {
+            const modal = document.getElementById('addressModal');
+            modal.classList.remove('active');
+        }
+
+        function saveAddress() {
+            const addressInput = document.getElementById('addressInput');
+            const userProfile = initializeUserProfile();
+
+            // Update address
+            userProfile.addresses.home = addressInput.value;
+            localStorage.setItem('userProfile', JSON.stringify(userProfile));
+
+            // Close modal and refresh cart page
+            closeAddressModal();
+            renderCartPage();
+
+            // Show success notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg';
+            notification.textContent = 'Address updated successfully!';
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+
         // Update window.onload to initialize orders and show them
         window.onload = function () {
             // Initialize cart storage if it doesn't exist
@@ -1508,6 +1729,9 @@
 
             // Create floating cart button
             createFloatingCartButton();
+
+            // Initialize size option handlers
+            initializeSizeOptions();
 
             // Initialize orders with demo data if needed
             if (!localStorage.getItem('orders')) {
