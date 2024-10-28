@@ -105,6 +105,129 @@ function createProductCard(product) {
     `;
 }
 
+function renderOptionsPage() {
+    const mainContent = document.querySelector('main');
+    mainContent.innerHTML = `
+        <div class="container mx-auto px-4 max-w-lg">
+            <!-- Header -->
+            <div class="flex items-center space-x-2 mb-6">
+                <button onclick="selectCategory('all')" class="text-gray-600 hover:text-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h2 class="text-2xl font-semibold text-gray-800">Options</h2>
+            </div>
+
+            <!-- Options List -->
+            <div class="space-y-3">
+                <!-- Menu Items -->
+                <button onclick="handleOptionClick('ratings')" class="w-full bg-white shadow-md hover:shadow-lg rounded-xl p-4 flex items-center justify-between transition-shadow">
+                    <span class="text-gray-800 font-medium">Ratings & Reviews</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                <button onclick="handleOptionClick('contact')" class="w-full bg-white shadow-md hover:shadow-lg rounded-xl p-4 flex items-center justify-between transition-shadow">
+                    <span class="text-gray-800 font-medium">Contact</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                <button onclick="handleOptionClick('about')" class="w-full bg-white shadow-md hover:shadow-lg rounded-xl p-4 flex items-center justify-between transition-shadow">
+                    <span class="text-gray-800 font-medium">About Us</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                <button onclick="handleOptionClick('terms')" class="w-full bg-white shadow-md hover:shadow-lg rounded-xl p-4 flex items-center justify-between transition-shadow">
+                    <span class="text-gray-800 font-medium">Terms & Conditions</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                <button onclick="handleOptionClick('privacy')" class="w-full bg-white shadow-md hover:shadow-lg rounded-xl p-4 flex items-center justify-between transition-shadow">
+                    <span class="text-gray-800 font-medium">Privacy Policy</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                <button onclick="handleOptionClick('refund')" class="w-full bg-white shadow-md hover:shadow-lg rounded-xl p-4 flex items-center justify-between transition-shadow">
+                    <span class="text-gray-800 font-medium">Refund Policy</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                <!-- Logout Button -->
+                <button onclick="handleLogout()" class="w-full mt-6 mb-24 py-4 rounded-xl text-white font-medium transition-all duration-300 relative overflow-hidden group"
+                    style="background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px);">
+                    <div class="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <span class="relative z-10">Sign Out</span>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Handle option clicks
+function handleOptionClick(option) {
+    // You can implement specific actions for each option
+    switch (option) {
+        case 'ratings':
+            // Handle ratings & reviews
+            break;
+        case 'contact':
+            // Handle contact
+            break;
+        case 'about':
+            // Handle about us
+            break;
+        case 'terms':
+            // Handle terms & conditions
+            break;
+        case 'privacy':
+            // Handle privacy policy
+            break;
+        case 'refund':
+            // Handle refund policy
+            break;
+    }
+}
+
+// Handle logout
+function handleLogout() {
+    // Show confirmation dialog
+    const shouldLogout = confirm('Are you sure you want to sign out?');
+
+    if (shouldLogout) {
+        // Create loading overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        overlay.innerHTML = `
+            <div class="bg-white rounded-lg p-6 text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+                <p class="text-gray-800">Signing out...</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        // Simulate logout process
+        setTimeout(() => {
+            // Clear local storage
+            localStorage.clear();
+
+            // Redirect to login page
+            window.location.href = 'index.php?action=logout';
+        }, 1500);
+    }
+}
+
 // Function to render products based on category
 function renderProducts(category = 'all') {
     const productGrid = document.getElementById('productGrid');
@@ -217,6 +340,180 @@ function updateSizeButton(productId) {
     sizeButton.textContent = sizeSelections[productId];
 }
 
+// Handle option clicks
+function handleOptionClick(option) {
+    const mainContent = document.querySelector('main');
+
+    switch (option) {
+        case 'ratings':
+            mainContent.innerHTML = `
+                <div class="container mx-auto px-4 max-w-lg">
+                    <!-- Back Button Header -->
+                    <div class="flex items-center space-x-2 mb-6">
+                        <button onclick="renderOptionsPage()" class="text-gray-600 hover:text-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <h2 class="text-2xl font-semibold text-gray-800">Ratings & Reviews</h2>
+                    </div>
+                    <!-- Content -->
+                    <div class="bg-white rounded-xl shadow-md p-4 mb-24">
+                        <p>Ratings and reviews content coming soon...</p>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'contact':
+            mainContent.innerHTML = `
+                <div class="container mx-auto px-4 max-w-lg">
+                    <!-- Back Button Header -->
+                    <div class="flex items-center space-x-2 mb-6">
+                        <button onclick="renderOptionsPage()" class="text-gray-600 hover:text-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <h2 class="text-2xl font-semibold text-gray-800">Contact Us</h2>
+                    </div>
+                    <!-- Content -->
+                    <div class="bg-white rounded-xl shadow-md p-4 mb-24">
+                        <div class="space-y-4">
+                            <p class="font-medium">Get in touch with us:</p>
+                            <div class="flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                                </svg>
+                                <span>+880 1677552128</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                </svg>
+                                <span>contact@drops.com</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                </svg>
+                                <span>Dhaka, Bangladesh</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'about':
+            mainContent.innerHTML = `
+                <div class="container mx-auto px-4 max-w-lg">
+                    <!-- Back Button Header -->
+                    <div class="flex items-center space-x-2 mb-6">
+                        <button onclick="renderOptionsPage()" class="text-gray-600 hover:text-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <h2 class="text-2xl font-semibold text-gray-800">About Us</h2>
+                    </div>
+                    <!-- Content -->
+                    <div class="bg-white rounded-xl shadow-md p-4 mb-24">
+                        <div class="space-y-4">
+                            <p>Welcome to Drops - where every sip tells a story. Founded in 2024, we've been crafting exceptional coffee experiences for our valued customers.</p>
+                            <p>Our mission is to deliver not just coffee, but moments of joy and connection right to your doorstep.</p>
+                            <p>With carefully sourced beans and expert baristas, we ensure every cup meets our high standards of quality and taste.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'terms':
+            mainContent.innerHTML = `
+                <div class="container mx-auto px-4 max-w-lg">
+                    <!-- Back Button Header -->
+                    <div class="flex items-center space-x-2 mb-6">
+                        <button onclick="renderOptionsPage()" class="text-gray-600 hover:text-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <h2 class="text-2xl font-semibold text-gray-800">Terms & Conditions</h2>
+                    </div>
+                    <!-- Content -->
+                    <div class="bg-white rounded-xl shadow-md p-4 mb-24">
+                        <div class="space-y-4">
+                            <h3 class="font-medium">1. Orders</h3>
+                            <p>All orders are subject to availability and confirmation of the order price.</p>
+                            
+                            <h3 class="font-medium">2. Delivery</h3>
+                            <p>We aim to deliver within the specified time frame. Delays may occur due to unforeseen circumstances.</p>
+                            
+                            <h3 class="font-medium">3. Payment</h3>
+                            <p>Payments are processed securely through our authorized payment partners.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'privacy':
+            mainContent.innerHTML = `
+                <div class="container mx-auto px-4 max-w-lg">
+                    <!-- Back Button Header -->
+                    <div class="flex items-center space-x-2 mb-6">
+                        <button onclick="renderOptionsPage()" class="text-gray-600 hover:text-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <h2 class="text-2xl font-semibold text-gray-800">Privacy Policy</h2>
+                    </div>
+                    <!-- Content -->
+                    <div class="bg-white rounded-xl shadow-md p-4 mb-24">
+                        <div class="space-y-4">
+                            <h3 class="font-medium">Data Collection</h3>
+                            <p>We collect only necessary information to process your orders and improve our services.</p>
+                            
+                            <h3 class="font-medium">Data Usage</h3>
+                            <p>Your data is used solely for order processing and service improvement purposes.</p>
+                            
+                            <h3 class="font-medium">Data Protection</h3>
+                            <p>We implement robust security measures to protect your personal information.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'refund':
+            mainContent.innerHTML = `
+                <div class="container mx-auto px-4 max-w-lg">
+                    <!-- Back Button Header -->
+                    <div class="flex items-center space-x-2 mb-6">
+                        <button onclick="renderOptionsPage()" class="text-gray-600 hover:text-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <h2 class="text-2xl font-semibold text-gray-800">Refund Policy</h2>
+                    </div>
+                    <!-- Content -->
+                    <div class="bg-white rounded-xl shadow-md p-4 mb-24">
+                        <div class="space-y-4">
+                            <h3 class="font-medium">Order Cancellation</h3>
+                            <p>Orders can be cancelled and refunded before delivery is initiated.</p>
+                            
+                            <h3 class="font-medium">Quality Issues</h3>
+                            <p>Full refunds are provided for quality-related issues if reported within 30 minutes of delivery.</p>
+                            
+                            <h3 class="font-medium">Refund Process</h3>
+                            <p>Refunds are processed within 5-7 business days after approval.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+    }
+}
+
 // Function to handle category selection
 function selectCategory(category) {
     // Remove active class from all nav items
@@ -241,22 +538,28 @@ function selectCategory(category) {
         mainContent.className = 'container mx-auto px-4 py-8 page-transition';
 
         // Handle page content based on category
-        if (category === 'all') {
-            mainContent.innerHTML = `
-        <h2 id="categoryTitle" class="text-2xl font-semibold mb-6 text-gray-800">All Items</h2>
-        <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"></div>
-    `;
-            renderProducts('all');
-        } else if (category === 'cart') {
-            renderCartPage();
-        } else if (category === 'clipboard') {
-            renderClipboardPage();
-        } else if (category === 'user') {
-            renderUserPage();
-        } else if (category === 'options') {
-            renderOptionsPage();
-        } else {
-            renderProducts(category);
+        switch (category) {
+            case 'all':
+                mainContent.innerHTML = `
+                    <h2 id="categoryTitle" class="text-2xl font-semibold mb-6 text-gray-800">All Items</h2>
+                    <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+                `;
+                renderProducts('all');
+                break;
+            case 'cart':
+                renderCartPage();
+                break;
+            case 'clipboard':
+                renderClipboardPage();
+                break;
+            case 'user':
+                renderUserPage();
+                break;
+            case 'options':
+                renderOptionsPage(); // This will now be properly called
+                break;
+            default:
+                renderProducts(category);
         }
 
         // Fade in the new content
