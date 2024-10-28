@@ -1,8 +1,6 @@
 <?php 
-define('DB_HOST', 'srv571.hstgr.io');
-define('DB_NAME', 'u266162680_drops');
-define('DB_USER', 'u266162680_drops'); // change according to your MySQL user
-define('DB_PASS', '1831Drops!');     // change according to your MySQL password
+
+require_once 'confidential.php';
 
 class Database {
     private static $instance = null;
